@@ -14,7 +14,7 @@ function useParticipantSpatialAudio(meeting: Meeting) {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const nodesRef = useRef(new Map<string, { track: MediaStreamTrack; source: MediaStreamAudioSourceNode; panner: PannerNode }>());
   const participantAudioListenersRef = useRef(new Map<string, () => void>());
-  const orbitTimerRef = useRef<number | undefined>();
+  const orbitTimerRef = useRef<number | undefined>(0);
 
   // Shared helper to drop a participant from our graph.
   const removeParticipantNode = (participantId: string) => {
