@@ -21,3 +21,11 @@ All you have to do, to pick a variant of your choice, is to comment out the unde
 3. Open browser with the URL `http://localhost:5173/?authToken=PUT_PARTICIPANT_AUTH_TOKEN_HERE`. Change the port if needed.
 
 To learn more, refer to [the source code](./src/App.tsx)
+
+## Run on Cloudflare Workers
+
+1. Build the static assets with `npm run build` (outputs to `dist`).
+2. Serve locally as a Worker with `npm run worker:dev` (Wrangler serves `dist` via the `ASSETS` binding with an SPA fallback to `index.html` in `src/worker.ts`).
+3. Deploy to Workers with `npm run worker:deploy` (uses `wrangler.toml`, which runs the build before uploading).
+
+The Worker entrypoint lives at `src/worker.ts` and forwards requests to the bundled assets from `dist`, falling back to `index.html` for client-side routes.
