@@ -33,8 +33,21 @@ function useParticipantSpatialAudio(meeting: Meeting) {
   useEffect(() => {
     if (!meeting) return;
 
-    const audioCtx = audioCtxRef.current ?? new AudioContext();
-    audioCtxRef.current = audioCtx;
+    let audioCtx = audioCtxRef.current
+    
+    if(!audioCtx) {
+      audioCtx = new AudioContext();
+      audioCtx.onstatechange = () => {
+        console.log('[spatial] audio context state changed', audioCtx!.state);
+      }
+      audioCtxRef.current = audioCtx;
+      window.addEventListener('click', () => {
+        if (audioCtx?.state === 'suspended') {
+          console.log('[spatial] resuming audio context on user interaction');
+          audioCtx?.resume();
+        }
+      }, { once: true });
+    }
     console.log('[spatial] audio context ready', audioCtx.state);
 
     const upsertNode = (participantId: string, track?: MediaStreamTrack) => {
@@ -45,7 +58,12 @@ function useParticipantSpatialAudio(meeting: Meeting) {
       }
 
       const existing = nodesRef.current.get(participantId);
-      if (existing?.track === track) return;
+      if(existing) {
+        existing.source.disconnect();
+        existing.panner.disconnect();
+        nodesRef.current.delete(participantId);
+      }
+      // if (existing?.track === track) return;
 
       // Disable default playback for this participant to avoid double audio.
       // meeting.audio?.removeParticipantTrack?.(participantId);
@@ -64,10 +82,10 @@ function useParticipantSpatialAudio(meeting: Meeting) {
       panner.refDistance = 1;
       panner.maxDistance = 100;
       panner.rolloffFactor = 1;
+      console.log("[spatial] connecting spatial audio for participant", participantId);
       source.connect(panner).connect(audioCtx.destination);
       // source.connect(audioCtx.destination);
 
-      console.log(audioCtx)
 
       nodesRef.current.set(participantId, { track, source, panner });
       console.log('[spatial] attached participant audio', participantId, {
@@ -149,8 +167,8 @@ function useParticipantSpatialAudio(meeting: Meeting) {
         ordered.forEach(([_, { panner }], idx) => {
           const phase = (idx / Math.max(1, ordered.length)) * Math.PI * 2;
           const theta = angle + phase;
-          panner.positionX.setValueAtTime(Math.cos(theta) * radius, audioCtx.currentTime);
-          panner.positionZ.setValueAtTime(Math.sin(theta) * radius * 0.02, audioCtx.currentTime);
+          panner.positionX.setTargetAtTime(Math.cos(theta) * radius, audioCtx.currentTime, 0.005);
+          panner.positionZ.setTargetAtTime(Math.sin(theta) * radius * 0.02, audioCtx.currentTime, 0.005);
           // console.log('[spatial] updated position', idx, panner.positionX.value, audioCtx.currentTime)
         });
 
